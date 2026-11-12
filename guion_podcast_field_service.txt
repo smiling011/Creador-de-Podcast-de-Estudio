@@ -1,0 +1,71 @@
+SALOME: Hola, bienvenidos a este episodio de repaso de Field Service. Hoy vamos a recorrer la guía de soporte, como si estuviéramos tomándonos un café. Me acompaña Gonzalo.
+GONZALO: Hola, Salomé. Qué bueno estar aquí. Y vamos directo al grano, porque hay un dato que lo cambia todo: cerca del setenta por ciento de lo que llega en Field Service son errores de integración con SAP.
+SALOME: ¡Setenta por ciento! O sea que si aprendo a revisar integraciones, ya tengo la mayor parte del trabajo resuelto.
+GONZALO: Exacto. Pero antes de tocar nada, hay que ubicarse. Lo primero: ¿de qué proceso es la orden?
+SALOME: ¿Cuáles procesos hay?
+GONZALO: Dos grandes. Mantenimiento y logística. En mantenimiento, un técnico repara el equipo comercial. Puede ser en calle, cuando el técnico va hasta la tienda, o en taller, cuando el equipo se lleva a un centro de reparación.
+SALOME: Y logística es el de los camiones, ¿cierto?
+GONZALO: Sí. Son las solicitudes de movilización, las famosas SOLMOV: entregar o retirar equipos. También están las movilizaciones internas, que no mueven equipos, solo actualizan documentos como el contrato de comodato.
+SALOME: Bien. Y después del proceso, ¿qué miro?
+GONZALO: El tipo de registro de la orden. La orden de trabajo es el objeto central, pero cada tipo de registro tiene sus propias etapas, sus campos, sus flujos y sus integraciones. Una orden de calle no se comporta igual que una de taller.
+SALOME: ¿Y cómo lo reconozco rápido?
+GONZALO: Por las etapas de la barra de estados, o por el campo tipo de registro. Ah, y un detalle: en las movilizaciones los estados se manejan con números, como cincuenta y cuatro o sesenta y tres, porque así están en SAP.
+SALOME: Ahora, hay una palabra que siempre aparece: intercompany. ¿Qué es eso?
+GONZALO: Es cuando el dueño del equipo es una sociedad, pero quien lo repara es otra. Por ejemplo, el equipo es de Cárnicos, pero el técnico es de Meals. En la orden lo ves comparando dos campos: Sociedad, que es el dueño, y Responsable de mantenimiento, que es quien repara.
+SALOME: Entonces si son distintos, es intercompany.
+GONZALO: Así es. Y ojo: cada sociedad debe cruzar con su propio centro. La sociedad con el centro de emplazamiento, y el responsable de mantenimiento con el centro de puesto de trabajo.
+SALOME: Perfecto. Hablemos de integraciones. ¿Cómo viaja la información?
+GONZALO: Por tres capas. Salesforce, luego la capa media, que es AWS, y luego SAP. Y la respuesta vuelve por el mismo camino. Se disparan sobre todo por cambios de estado de la orden.
+SALOME: ¿Y cuánto se demora la respuesta?
+GONZALO: Normalmente entre cinco y siete minutos. Si pasan diez y nada, revisas el monitor de integraciones en SAP.
+SALOME: Dame un ejemplo concreto.
+GONZALO: La creación del aviso en una orden de calle. Es la primera integración. Se dispara entre los estados creada y asignada, y necesita un síntoma marcado como principal.
+SALOME: Ah, entonces si me dicen "la orden se quedó en creada y no tiene aviso"...
+GONZALO: Lo primero que revisas es si el síntoma tiene marcado el check de principal. Es un caso que llega seguido.
+SALOME: Muy bien. Ahora sí, el paso a paso. ¿Cómo atiendo un caso?
+GONZALO: La regla de oro de Brandon: primero entiende y corrige el dato, y solo después reprocesa.
+SALOME: Me la anoto. ¿Y los pasos?
+GONZALO: Uno: lee el caso, con el número de orden y el mensaje exacto. Dos: abre la orden e identifica su tipo de registro. Tres: revisa sociedad, responsable de mantenimiento, centros, cliente y equipo.
+SALOME: ¿Y dónde busco el error?
+GONZALO: Primero en Detalles de integración, dentro de la orden. Si ahí no hay nada, vas al objeto API logs y lees la respuesta.
+SALOME: ¿Y cómo sé qué tipo de error es?
+GONZALO: Hay dos grandes. El error capa, que significa que a la orden le falta un dato, y el llamado ni siquiera llega a la capa media. Y el error de SAP, cuando sí llegó, pero SAP lo rechazó, por ejemplo porque los datos del cliente no cuadran.
+SALOME: Y si es error capa, ¿cómo encuentro qué dato falta?
+GONZALO: Miras en el JSON qué campo va vacío. Y luego buscas de dónde sale ese campo en las clases que arman la integración. Brandon tiene todas las clases y flujos descargados en una carpeta, y busca ahí el nombre del campo.
+SALOME: ¿Y cómo sé qué valor ponerle?
+GONZALO: Con una orden espejo. Buscas órdenes con las mismas características, misma sociedad, mismo centro, mismo tipo, y miras qué valor tienen. En un caso real, las últimas cien órdenes de calle de Medellín tenían el mismo grupo planificador, así que ese era el valor correcto.
+SALOME: Me gusta. Es como cuando creas un usuario espejo.
+GONZALO: Exacto, la misma lógica. Y si hay duda, confirmas con el negocio o con quien creó la orden.
+SALOME: Después corrijo, guardo y reproceso.
+GONZALO: Sí. Esperas cinco a siete minutos, verificas que el API log quede en OK, que la orden cambie de estado o que aparezca el número de SAP. Y cierras el caso con una respuesta neutra.
+SALOME: Cuéntame uno de los casos fáciles que resolvió Brandon.
+GONZALO: El del estatus sesenta y tres. El mensaje dice: "el estatus sesenta y tres no es compatible con el estatus destino sesenta y tres".
+SALOME: ¿Y qué hizo?
+GONZALO: Nada complicado. Si el estado actual y el destino son el mismo número, es porque SAP ya tiene ese estado. Se marca el API log como OK, con una nota de cierre, y listo.
+SALOME: ¿Y uno más difícil?
+GONZALO: Una orden de calle intercompany que no creaba el aviso. SAP decía que el centro no era compatible con la organización de ventas. Resulta que la orden la había creado Sofía, la asistente de WhatsApp, con datos de una sociedad, pero el cliente era de otra, y además no tenía equipo.
+SALOME: Uy. ¿Y cómo lo arregló?
+GONZALO: Validó el cliente en SAP, comparando canal, sector, oficina y grupo de vendedores. Corrigió la sociedad y los centros, asoció el equipo del cliente, confirmó con quien creó el caso y reprocesó. Quedó en OK.
+SALOME: Ahora, hablemos del botón de reprocesar. ¿Siempre lo puedo usar?
+GONZALO: No. Reprocesar no arregla nada por sí solo, solo vuelve a mandar el mismo llamado. Y en taller hay que tener muchísimo cuidado.
+SALOME: ¿Por qué en taller?
+GONZALO: Porque en taller se mueve inventario de repuestos y dinero de servicios. Si reprocesas sin pensar, puedes volver a reservar o a entregar repuestos que ya estaban en SAP, y eso descuadra la bodega y la contabilidad.
+SALOME: ¿Y cómo reviso los repuestos de una orden de taller?
+GONZALO: En la orden de SAP, la pestaña Operaciones son los servicios, y Componentes son los repuestos. En el log, la letra R es reserva y la E es entrega. Comparas cuántos repuestos hay en Salesforce y cuántos componentes en SAP, y así encuentras el que falta.
+SALOME: Y si no estoy segura...
+GONZALO: Preguntas antes de reprocesar una orden de taller. Siempre.
+SALOME: Hablemos de SAP. ¿Qué puedo hacer ahí?
+GONZALO: Solo consultar y validar. No se toca ni se guarda nada sin confirmación, porque es un sistema muy sensible. Lo que más se usa es el monitor de integraciones, donde buscas por el número de la orden de Salesforce.
+SALOME: Antes de cerrar, repasemos unos términos que siempre me confunden. ¿Territorio?
+GONZALO: Es la zona geográfica donde se atiende la orden. En el mapa se ve como un polígono. Si la latitud y longitud de la dirección caen dentro, la orden toma ese territorio.
+SALOME: ¿Y si una orden no tiene territorio?
+GONZALO: Recorres la cadena: síntoma, clase de falla, tipo de trabajo, cita de servicio y territorio. Sin tipo de trabajo no nace la cita, y sin cita no se calcula el territorio. Y si la cita tiene coordenadas en cero, nunca va a calcular.
+SALOME: ¿Síntoma y repuesto?
+GONZALO: El síntoma es lo que le pasa al equipo, por ejemplo "pasa corriente". Va en cadena: síntoma, sistema, componente y causa. El repuesto es la pieza que se cambia, como una rodachina o un compresor. Viene de SAP, y solo se pueden usar los compatibles con la clase de equipo.
+SALOME: ¿Y EQAS y EQDS?
+GONZALO: Son estados de usuario del equipo en SAP. EQAS se usa como equipo asignado a un cliente, y EQDS es el que se envía cuando el fabricante repara un equipo en garantía. Las siglas exactas, mejor confirmarlas con el equipo.
+SALOME: Cerremos con el checklist rápido.
+GONZALO: Leer el caso. Identificar el tipo de registro. Revisar si es intercompany. Revisar centros, cliente y equipo. En calle, síntoma principal. Leer detalles de integración o el API log. Clasificar el error. Validar con una orden espejo. Corregir y guardar. Pensar dos veces si es taller. Reprocesar, esperar, verificar y cerrar.
+SALOME: Gonzalo, mil gracias. Esto me deja mucho más tranquila.
+GONZALO: Con gusto. Y recuerda: primero entiende, luego corrige, y al final reprocesa.
+SALOME: Hasta la próxima.
